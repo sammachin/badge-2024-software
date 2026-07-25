@@ -396,11 +396,8 @@ class SettingsApp(app.App):
             ("pattern_mirror_hexpansions", "Mirror pattern", on_off_formatter, None),
             ("backleds_emotes", "Flash emotes on backleds", on_off_formatter, None),
             ("background", "Background", tuple_formatter, None),
-<<<<<<< Updated upstream
             ("enable_boot_animation", "Enable Boot Animation", on_off_formatter, None),
-=======
             ("utc_offset", "UTC Offset", string_formatter, None),
->>>>>>> Stashed changes
             ("version", "Software version", version_formatter, self.dev_mode),
             ("update_channel", "Update channel", string_formatter, None),
             ("wifi_tx_power", "WiFi TX power", string_formatter, None),
