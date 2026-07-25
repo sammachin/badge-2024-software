@@ -68,7 +68,10 @@ def reset_wifi_settings():
 
 BRIGHTNESSES = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 CHANNELS = ["latest", "preview"]
-UTC_OFFSETS = [
+
+# Display labels for the UTC offset picker. The value stored in settings is the
+# offset in seconds (see UTC_OFFSETS below); these strings are only for display.
+UTC_OFFSET_LABELS = [
     "-12:00", "-11:00", "-10:00", "-09:30", "-09:00", "-08:00", "-07:00",
     "-06:00", "-05:00", "-04:00", "-03:30", "-03:00", "-02:00", "-01:00",
     "00:00", "+01:00", "+02:00", "+03:00", "+03:30", "+04:00", "+04:30",
@@ -76,6 +79,26 @@ UTC_OFFSETS = [
     "+08:45", "+09:00", "+09:30", "+10:00", "+10:30", "+11:00", "+12:00",
     "+12:45", "+13:00", "+14:00",
 ]
+
+
+def _offset_label_to_seconds(label):
+    sign = -1 if label[0] == "-" else 1
+    body = label[1:] if label[0] in "+-" else label
+    hh, mm = body.split(":")
+    return sign * (int(hh) * 3600 + int(mm) * 60)
+
+
+# (seconds, label) pairs in display order. The stored setting is the seconds int.
+UTC_OFFSETS = [(_offset_label_to_seconds(lbl), lbl) for lbl in UTC_OFFSET_LABELS]
+
+
+def utc_offset_formatter(value):
+    if value is None:
+        return "Default"
+    for secs, label in UTC_OFFSETS:
+        if secs == value:
+            return label
+    return str(value)
 
 
 class SettingsApp(app.App):
@@ -339,14 +362,15 @@ class SettingsApp(app.App):
 
                     async def _button_event_utc_offset_toggle(event):
                         if BUTTON_TYPES["CONFIRM"] in event.button:
-                            offset = settings.get("utc_offset")
-                            if offset not in UTC_OFFSETS:
-                                offset = "00:00"
-                            idx = UTC_OFFSETS.index(offset) + 1
-                            if idx >= len(UTC_OFFSETS):
-                                idx = 0
-                            print(f"{UTC_OFFSETS} {idx}")
-                            settings.set("utc_offset", UTC_OFFSETS[idx])
+                            current = settings.get("utc_offset", 0)
+                            idx = 0
+                            for i, (secs, label) in enumerate(UTC_OFFSETS):
+                                if secs == current:
+                                    idx = i
+                                    break
+                            idx = (idx + 1) % len(UTC_OFFSETS)
+                            # store the offset in seconds; label is display-only
+                            settings.set("utc_offset", UTC_OFFSETS[idx][0])
                             await self.update_values()
                             await render_update()
                             return True
@@ -397,7 +421,7 @@ class SettingsApp(app.App):
             ("backleds_emotes", "Flash emotes on backleds", on_off_formatter, None),
             ("background", "Background", tuple_formatter, None),
             ("enable_boot_animation", "Enable Boot Animation", on_off_formatter, None),
-            ("utc_offset", "UTC Offset", string_formatter, None),
+            ("utc_offset", "UTC Offset", utc_offset_formatter, None),
             ("version", "Software version", version_formatter, self.dev_mode),
             ("update_channel", "Update channel", string_formatter, None),
             ("wifi_tx_power", "WiFi TX power", string_formatter, None),
